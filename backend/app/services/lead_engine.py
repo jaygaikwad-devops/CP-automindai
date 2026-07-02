@@ -260,4 +260,25 @@ async def check_and_alert(
     except Exception as e:
         logger.error(f"Alert notification failed for session {session_id}: {e}")
 
+    # Push real-time update to CP dashboard (best-effort)
+    try:
+        from app.api.dashboard import push_hot_lead_update
+
+        lead_data = {
+            "lead_id": session_id,
+            "buyer_name": session.get("buyer_name"),
+            "buyer_phone": session.get("buyer_phone"),
+            "project_name": "",  # Will be "Unknown" on client if empty
+            "score": score,
+            "classification": classification,
+            "signals": [
+                {"type": k, "points": v.get("points", 0) if isinstance(v, dict) else 0}
+                for k, v in signals_map.items()
+            ],
+            "created_at": session.get("created_at", ""),
+        }
+        await push_hot_lead_update(cp_id, lead_data)
+    except Exception as e:
+        logger.warning(f"Dashboard push failed for cp_id={cp_id}: {e}")
+
     return True
