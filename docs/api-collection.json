@@ -1,0 +1,301 @@
+{
+  "info": {
+    "name": "AutoMind CP Portal API",
+    "description": "Full API collection for AutoMind AI Platform - CP Portal Backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8001" },
+    { "key": "token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Request OTP",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/auth/otp/request",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"9876543210\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/auth/otp/verify",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"123456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register CP",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/auth/register",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Raj Kumar\",\n  \"rera_id\": \"RERA/MH/2024/12345\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Anonymous Session",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/auth/session/anonymous",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"link_id\": \"<share_link_uuid>\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/dashboard/stats",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "Get Hot Leads",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/dashboard/hot-leads?limit=50&offset=0",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "Get Lead Detail",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/dashboard/leads/<lead_id>",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Projects",
+      "item": [
+        {
+          "name": "List Projects",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/projects",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "Create Share Link",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/projects/<project_id>/share-link",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "Track Click",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/projects/tour/<url_slug>/click"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Billing",
+      "item": [
+        {
+          "name": "List Credit Packs",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/billing/packs"
+          }
+        },
+        {
+          "name": "Purchase Credits",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/billing/purchase",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pack_type\": \"starter\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Razorpay Webhook",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/billing/webhook",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Razorpay-Signature", "value": "<signature>" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"payment.captured\",\n  \"payload\": {\n    \"payment\": {\n      \"entity\": {\n        \"order_id\": \"order_xxx\"\n      }\n    }\n  }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Create Project",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/projects",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sunshine Heights\",\n  \"builder_name\": \"ABC Builders\",\n  \"location\": \"Mumbai\",\n  \"unit_types\": [\"2BHK\", \"3BHK\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Assign CP Partnership",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/partnerships",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cp_id\": \"<cp_uuid>\",\n  \"project_id\": \"<project_uuid>\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Remove Partnership",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/admin/partnerships/<partnership_id>",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "Upload Asset",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/projects/<project_id>/assets",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" },
+                { "key": "asset_type", "value": "image" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Trigger Processing",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/projects/<project_id>/process",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tours",
+      "item": [
+        {
+          "name": "Record Tour Event",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/tours/<session_id>/events",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"room_view\",\n  \"data\": {\n    \"room_id\": \"living_room\",\n    \"duration_seconds\": 45\n  }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "WebSocket",
+      "item": [
+        {
+          "name": "Dashboard Real-time (WS)",
+          "request": {
+            "method": "GET",
+            "url": "ws://localhost:8001/api/v1/dashboard/ws",
+            "description": "WebSocket connection for real-time hot lead updates. Connect with token as query param: ws://localhost:8001/api/v1/dashboard/ws?token=<jwt>"
+          }
+        }
+      ]
+    }
+  ]
+}
