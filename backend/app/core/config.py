@@ -24,7 +24,12 @@ class Settings(BaseSettings):
     port: int = 8000
 
     # CORS
-    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3001"]
+    cors_origins: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "https://d216tnm1kuc704.cloudfront.net",
+        "http://automind-api-alb-2046660663.ap-south-1.elb.amazonaws.com",
+    ]
 
     # Database (RDS PostgreSQL)
     database_url: str = "postgresql+asyncpg://automind:automind@localhost:5432/cp_portal"
