@@ -141,6 +141,62 @@ class APIClient {
       body: JSON.stringify({ pack_type: packType }),
     });
   }
+
+  // Admin
+  async createProject(data: {
+    name: string;
+    builder_id: string;
+    location: string;
+    unit_types: string[];
+  }) {
+    return this.request<{ project_id: string; status: string }>(
+      "/api/v1/admin/projects",
+      { method: "POST", body: JSON.stringify(data) }
+    );
+  }
+
+  async assignPartnership(cpId: string, projectId: string) {
+    return this.request<{ partnership_id: string }>(
+      "/api/v1/admin/partnerships",
+      { method: "POST", body: JSON.stringify({ cp_id: cpId, project_id: projectId }) }
+    );
+  }
+
+  async removePartnership(partnershipId: string) {
+    return this.request<void>(
+      `/api/v1/admin/partnerships/${partnershipId}`,
+      { method: "DELETE" }
+    );
+  }
+
+  async uploadAsset(projectId: string, file: File, assetType: string) {
+    const token = this.getToken();
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("asset_type", assetType);
+
+    const response = await fetch(
+      `${this.baseUrl}/api/v1/admin/projects/${projectId}/assets`,
+      {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: { message: "Upload failed" } }));
+      throw { status: response.status, ...error };
+    }
+    return response.json();
+  }
+
+  async triggerProcessing(projectId: string) {
+    return this.request<{ job_id: string; status: string }>(
+      `/api/v1/admin/projects/${projectId}/process`,
+      { method: "POST" }
+    );
+  }
 }
 
 export const api = new APIClient(API_BASE);
