@@ -346,6 +346,27 @@ Implement the AutoMind AI Platform following a 4-week build priority: Infrastruc
 - [ ] 26. Final checkpoint - All systems integrated
   - Ensure all tests pass, ask the user if questions arise.
 
+- [ ] 27. Production deployment and DNS
+  - [ ] 27.1 Deploy CP Portal backend to ECS with updated CORS
+    - Build Docker image with production CORS (CloudFront + ALB domains)
+    - Push to ECR and force ECS redeployment
+    - Run Alembic migrations on production RDS
+    - Verify health endpoint responds on ALB
+  - [ ] 27.2 Deploy frontend to S3 + CloudFront
+    - Build Next.js static export with production API URL
+    - Upload to CDN origin S3 bucket
+    - Invalidate CloudFront cache
+    - Verify frontend loads on CloudFront domain
+  - [ ] 27.3 Seed demo data for working demo
+    - Create builder, project, partnership in production DB
+    - Register a test CP via OTP flow
+    - Verify full login → dashboard → projects flow works
+  - [ ] 27.4 Configure HTTPS (ACM + ALB)
+    - Request ACM certificate for ALB (or use CloudFront HTTPS which is already enabled)
+    - Add HTTPS listener to ALB (when custom domain available)
+  - [ ] 27.5 GitHub Actions CI/CD pipeline
+    - Automate: push to main → build → test → deploy backend → deploy frontend
+
 ## Notes
 
 - Tasks marked with `*` are optional property-based test tasks and can be skipped for faster MVP
