@@ -29,6 +29,8 @@ class Settings(BaseSettings):
         "http://localhost:3001",
         "https://d216tnm1kuc704.cloudfront.net",
         "http://automind-api-alb-2046660663.ap-south-1.elb.amazonaws.com",
+        "https://api.automindai.info",
+        "https://app.automindai.info",
     ]
 
     # Database (RDS PostgreSQL)
