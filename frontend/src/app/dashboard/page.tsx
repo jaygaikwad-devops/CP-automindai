@@ -132,7 +132,7 @@ export default function DashboardPage() {
                   <tr key={lead.lead_id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <Link
-                        href={`/dashboard/leads/${lead.lead_id}`}
+                        href={`/leads?id=${lead.lead_id}`}
                         className="text-sm font-medium text-primary-600 hover:text-primary-700"
                       >
                         {lead.buyer_name || "Anonymous Buyer"}
