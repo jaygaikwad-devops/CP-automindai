@@ -150,6 +150,15 @@ export default function ProjectsPage() {
               >
                 Open WhatsApp
               </a>
+
+              <a
+                href={`/tour/?id=${shareModal.link_id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full text-center py-2.5 bg-primary-600 text-white rounded-lg font-medium text-sm hover:bg-primary-700 mt-2"
+              >
+                🏠 Preview Tour
+              </a>
             </div>
 
             <button

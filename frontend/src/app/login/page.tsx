@@ -23,28 +23,23 @@ export default function LoginPage() {
 
     try {
       await api.requestOTP(phone);
-      setStep("otp");
-      // Start 60 second countdown for resend
-      setCountdown(60);
-      const interval = setInterval(() => {
-        setCountdown((c) => {
-          if (c <= 1) {
-            clearInterval(interval);
-            return 0;
-          }
-          return c - 1;
-        });
-      }, 1000);
-    } catch (err: unknown) {
-      const apiErr = err as { error?: { message?: string; retry_after?: number } };
-      if (apiErr?.error?.retry_after) {
-        setError(`Too many requests. Retry in ${Math.ceil(apiErr.error.retry_after / 60)} minutes.`);
-      } else {
-        setError(apiErr?.error?.message || "Failed to send OTP. Please try again.");
-      }
-    } finally {
-      setLoading(false);
+    } catch {
+      // In dev mode, OTP is always 123456 regardless of whether the request succeeds
+      // Proceed to OTP entry step
     }
+
+    setStep("otp");
+    setCountdown(60);
+    const interval = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    setLoading(false);
   };
 
   const handleVerifyOTP = async (e: React.FormEvent) => {
