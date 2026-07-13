@@ -459,3 +459,38 @@ async def trigger_processing(
     return ProcessingTriggerResponse(
         job_id=str(job_id), status="processing_in_progress"
     )
+
+
+# --- Set Project Tour Ready (Dev/Demo shortcut) ---
+
+
+class SetStatusResponse(BaseModel):
+    project_id: str
+    tour_status: str
+
+
+@router.post(
+    "/projects/{project_id}/set-tour-ready",
+    response_model=SetStatusResponse,
+)
+async def set_project_tour_ready(
+    project_id: str,
+    admin_user: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Set a project status directly to tour_ready.
+
+    Dev/demo shortcut that skips the full processing pipeline.
+    In production, status transitions should go through the pipeline.
+    """
+    result = await db.execute(
+        select(Project).where(Project.id == uuid.UUID(project_id))
+    )
+    project = result.scalar_one_or_none()
+    if not project:
+        raise NotFoundException(message="Project not found")
+
+    project.tour_status = "tour_ready"
+    await db.flush()
+
+    return SetStatusResponse(project_id=project_id, tour_status="tour_ready")
