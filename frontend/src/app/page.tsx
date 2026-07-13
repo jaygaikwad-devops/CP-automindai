@@ -1,267 +1,232 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import PriyaAvatar from "@/components/PriyaAvatar";
-
-// Construction → Building animation phases
-const PHASES = [
-  { label: "Foundation", progress: 15 },
-  { label: "Structure", progress: 35 },
-  { label: "Finishing", progress: 60 },
-  { label: "Interiors", progress: 80 },
-  { label: "Ready to Move", progress: 100 },
-];
 
 export default function LandingPage() {
-  const [buildPhase, setBuildPhase] = useState(0);
-  const [showContent, setShowContent] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
-  const heroRef = useRef<HTMLDivElement>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [activeStep, setActiveStep] = useState(0);
 
-  // Building animation on load
   useEffect(() => {
-    const timer = setInterval(() => {
-      setBuildPhase((prev) => {
-        if (prev >= PHASES.length - 1) {
-          clearInterval(timer);
-          setTimeout(() => setShowContent(true), 400);
-          return prev;
-        }
-        return prev + 1;
-      });
-    }, 600);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Parallax scroll
-  useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    setLoaded(true);
+    const interval = setInterval(() => {
+      setActiveStep((prev) => (prev + 1) % 4);
+    }, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="min-h-screen bg-white overflow-x-hidden">
-      {/* ===== HERO SECTION ===== */}
-      <section ref={heroRef} className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Animated gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900" />
-        
-        {/* Floating particles */}
-        <div className="absolute inset-0 overflow-hidden">
-          {[...Array(20)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 bg-white/20 rounded-full animate-pulse"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 3}s`,
-                animationDuration: `${2 + Math.random() * 3}s`,
-              }}
-            />
-          ))}
+    <div className="min-h-screen bg-white">
+      {/* ===== NAVIGATION ===== */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">A</span>
+            </div>
+            <span className="text-xl font-bold text-gray-900">AutoMind</span>
+          </div>
+          <div className="hidden md:flex items-center gap-8 text-sm text-gray-600">
+            <a href="#how-it-works" className="hover:text-gray-900 transition-colors">How It Works</a>
+            <a href="#features" className="hover:text-gray-900 transition-colors">Features</a>
+            <a href="#guide" className="hover:text-gray-900 transition-colors">Guide</a>
+          </div>
+          <Link
+            href="/login"
+            className="px-5 py-2.5 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+          >
+            Login
+          </Link>
+        </div>
+      </nav>
+
+      {/* ===== HERO ===== */}
+      <section className="relative pt-32 pb-20 md:pt-40 md:pb-32 overflow-hidden">
+        {/* Background: Real construction → building photo */}
+        <div className="absolute inset-0">
+          <img
+            src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=80"
+            alt="Modern skyscraper"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/70" />
         </div>
 
-        {/* Building Animation */}
-        <div className="absolute inset-0 flex items-end justify-center pb-20 opacity-20" style={{ transform: `translateY(${scrollY * 0.3}px)` }}>
-          <svg viewBox="0 0 400 300" className="w-[600px] h-[450px]" fill="none">
-            {/* Ground */}
-            <rect x="0" y="280" width="400" height="20" fill="#1e3a5f" opacity="0.5" />
-            
-            {/* Building floors - animate based on phase */}
-            {[...Array(Math.min(buildPhase + 1, 5))].map((_, i) => (
-              <g key={i} className="animate-in fade-in slide-in-from-bottom duration-500" style={{ animationDelay: `${i * 200}ms` }}>
-                <rect x={120} y={260 - i * 50} width="160" height="45" fill={`rgba(59, 130, 246, ${0.3 + i * 0.1})`} stroke="rgba(147, 197, 253, 0.3)" strokeWidth="1" rx="2" />
-                {/* Windows */}
-                {[...Array(4)].map((_, j) => (
-                  <rect key={j} x={135 + j * 38} y={268 - i * 50} width="20" height="28" fill={buildPhase >= i ? "rgba(251, 191, 36, 0.6)" : "rgba(30, 58, 95, 0.5)"} rx="1" />
-                ))}
-              </g>
-            ))}
-            
-            {/* Crane (visible during construction) */}
-            {buildPhase < 4 && (
-              <g className="animate-pulse" style={{ animationDuration: "2s" }}>
-                <line x1="320" y1="50" x2="320" y2="280" stroke="rgba(251, 191, 36, 0.4)" strokeWidth="3" />
-                <line x1="250" y1="55" x2="380" y2="55" stroke="rgba(251, 191, 36, 0.4)" strokeWidth="2" />
-                <line x1="300" y1="55" x2="300" y2="100" stroke="rgba(147, 197, 253, 0.3)" strokeWidth="1" strokeDasharray="4" />
-              </g>
-            )}
-            
-            {/* Completed flag */}
-            {buildPhase >= 4 && (
-              <g className="animate-in fade-in zoom-in duration-700">
-                <rect x="185" y="30" width="30" height="20" fill="#22c55e" rx="2" />
-                <line x1="185" y1="30" x2="185" y2="60" stroke="#22c55e" strokeWidth="2" />
-                <text x="192" y="44" fill="white" fontSize="8" fontWeight="bold">✓</text>
-              </g>
-            )}
-          </svg>
-        </div>
+        <div className={`relative max-w-7xl mx-auto px-6 transition-all duration-1000 ${loaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-full mb-8">
+              <span className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+              <span className="text-sm font-medium text-blue-700">AI-Powered Real Estate Platform</span>
+            </div>
 
-        {/* Hero Content */}
-        <div className={`relative z-10 text-center px-6 max-w-4xl mx-auto transition-all duration-1000 ${showContent ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
-          {/* Phase indicator */}
-          <div className="mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 mb-6">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              <span className="text-white/80 text-xs font-medium tracking-wider uppercase">
-                {buildPhase >= 4 ? "Platform Live" : `Building... ${PHASES[buildPhase].label}`}
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 leading-[1.1] tracking-tight mb-8">
+              From Site Visit
+              <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
+                to Sold.
               </span>
+            </h1>
+
+            <p className="text-xl text-gray-600 leading-relaxed mb-10 max-w-lg">
+              Share AI virtual tours on WhatsApp. Get instant alerts when buyers are ready. 
+              Close deals faster with real-time intent scoring.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center px-8 py-4 bg-gray-900 text-white rounded-full text-base font-semibold hover:bg-gray-800 shadow-xl shadow-gray-900/20 transition-all hover:-translate-y-0.5"
+              >
+                Get Started Free
+                <span className="ml-2">→</span>
+              </Link>
+              <a
+                href="#how-it-works"
+                className="inline-flex items-center justify-center px-8 py-4 bg-white text-gray-700 rounded-full text-base font-semibold border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all"
+              >
+                Watch Demo
+              </a>
+            </div>
+
+            {/* Trust indicators */}
+            <div className="mt-14 flex items-center gap-8">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">500+</div>
+                <div className="text-xs text-gray-500">Channel Partners</div>
+              </div>
+              <div className="w-px h-10 bg-gray-200" />
+              <div>
+                <div className="text-2xl font-bold text-gray-900">10,000+</div>
+                <div className="text-xs text-gray-500">Tours Generated</div>
+              </div>
+              <div className="w-px h-10 bg-gray-200" />
+              <div>
+                <div className="text-2xl font-bold text-gray-900">3 sec</div>
+                <div className="text-xs text-gray-500">Lead Alert Time</div>
+              </div>
             </div>
           </div>
-
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight tracking-tight">
-            Turn Property Tours into
-            <span className="block bg-gradient-to-r from-blue-400 via-cyan-300 to-teal-300 bg-clip-text text-transparent">
-              Hot Leads
-            </span>
-          </h1>
-          
-          <p className="text-lg md:text-xl text-blue-100/80 mb-10 max-w-2xl mx-auto leading-relaxed">
-            AI-powered virtual tours with Priya — your 24/7 sales avatar. 
-            Share on WhatsApp, score buyer intent in real-time, 
-            and get instant alerts when they&apos;re ready to buy.
-          </p>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-            <Link
-              href="/login"
-              className="group relative px-8 py-4 bg-white text-slate-900 rounded-2xl font-bold text-lg shadow-2xl shadow-white/20 hover:shadow-white/30 transition-all duration-300 hover:-translate-y-1"
-            >
-              <span className="relative z-10">Start Selling Smarter →</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-            </Link>
-            <a
-              href="#how-it-works"
-              className="px-8 py-4 text-white/90 border border-white/30 rounded-2xl font-medium hover:bg-white/10 transition-all duration-300"
-            >
-              See How It Works
-            </a>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-8 max-w-md mx-auto">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-white">3s</div>
-              <div className="text-xs text-blue-200/60 mt-1">Lead Alert Time</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-white">10x</div>
-              <div className="text-xs text-blue-200/60 mt-1">More Conversions</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-white">24/7</div>
-              <div className="text-xs text-blue-200/60 mt-1">AI Sales Avatar</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-          <svg className="w-6 h-6 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-          </svg>
         </div>
       </section>
 
       {/* ===== HOW IT WORKS ===== */}
-      <section id="how-it-works" className="py-24 px-6 bg-gradient-to-b from-slate-50 to-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
-              How AutoMind Works
+      <section id="how-it-works" className="py-24 md:py-32 px-6 bg-gray-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-20">
+            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">How It Works</p>
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
+              Four steps to your next deal
             </h2>
-            <p className="text-lg text-slate-500 max-w-2xl mx-auto">
-              From property listing to hot lead — in 4 simple steps
-            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
             {[
-              { step: "1", icon: "📲", title: "Share Tour", desc: "Generate a WhatsApp link for any project. Share with buyers in one tap." },
-              { step: "2", icon: "🏠", title: "Buyer Explores", desc: "Buyer opens the link — sees an AI-narrated room-by-room virtual tour." },
-              { step: "3", icon: "💬", title: "Priya Engages", desc: "Our AI avatar Priya answers questions about price, EMI, amenities in real-time." },
-              { step: "4", icon: "🔥", title: "Hot Lead Alert", desc: "When engagement score hits 7+, you get an instant WhatsApp alert with buyer details." },
-            ].map((item, i) => (
-              <div key={i} className="relative group">
-                <div className="bg-white rounded-3xl p-8 shadow-lg shadow-slate-200/50 border border-slate-100 hover:shadow-xl hover:-translate-y-2 transition-all duration-500">
-                  <div className="text-4xl mb-4">{item.icon}</div>
-                  <div className="absolute -top-3 -right-3 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg">
-                    {item.step}
+              {
+                num: "01",
+                title: "Share Tour Link",
+                desc: "Pick a project, generate a branded WhatsApp link with OG preview card. Send to any buyer in one tap.",
+                img: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600&q=80",
+              },
+              {
+                num: "02",
+                title: "Buyer Takes Virtual Tour",
+                desc: "Buyer opens the link on their phone. They see a room-by-room walkthrough with real photos and AI narration.",
+                img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=600&q=80",
+              },
+              {
+                num: "03",
+                title: "Priya Answers Questions",
+                desc: "Our AI avatar answers price, EMI, RERA, floor plan questions in real-time. Every interaction is scored.",
+                img: "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=600&q=80",
+              },
+              {
+                num: "04",
+                title: "You Get Hot Lead Alert",
+                desc: "When buyer intent crosses threshold 7/10, you get instant WhatsApp notification with their name, phone, and what they asked.",
+                img: "https://images.unsplash.com/photo-1611746872915-64382b5c76da?w=600&q=80",
+              },
+            ].map((step, i) => (
+              <div
+                key={i}
+                className={`group relative bg-white rounded-3xl overflow-hidden border border-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 ${activeStep === i ? "ring-2 ring-blue-500/50 shadow-xl" : ""}`}
+              >
+                <div className="aspect-[16/9] overflow-hidden">
+                  <img
+                    src={step.img}
+                    alt={step.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  />
+                  <div className="absolute top-4 left-4 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg">
+                    <span className="text-sm font-bold text-gray-900">{step.num}</span>
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">{item.title}</h3>
-                  <p className="text-slate-500 text-sm leading-relaxed">{item.desc}</p>
                 </div>
-                {i < 3 && (
-                  <div className="hidden md:block absolute top-1/2 -right-4 w-8 text-slate-300">
-                    →
-                  </div>
-                )}
+                <div className="p-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{step.title}</h3>
+                  <p className="text-gray-500 text-sm leading-relaxed">{step.desc}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ===== MEET PRIYA ===== */}
-      <section className="py-24 px-6 bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
-        <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+      {/* ===== FEATURES / LEAD SCORING ===== */}
+      <section id="features" className="py-24 md:py-32 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-100 rounded-full mb-6">
-                <PriyaAvatar size="badge" isSpeaking />
-                <span className="text-sm font-medium text-indigo-700">Meet Priya</span>
-              </div>
-              <h2 className="text-4xl font-bold text-slate-900 mb-6">
-                Your AI Sales Avatar That Never Sleeps
+              <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">Real-Time Intelligence</p>
+              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+                Know who&apos;s ready
+                <br />before they call you
               </h2>
-              <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                Priya narrates every room, answers buyer questions about price, EMI, RERA, and amenities — 
-                powered by AI that knows everything about your project. She works 24/7, never takes a day off, 
-                and identifies hot buyers before they even call you.
+              <p className="text-lg text-gray-600 mb-10 leading-relaxed">
+                Every buyer interaction is scored automatically. You see exactly what they&apos;re interested in — 
+                price, EMI, specific rooms, amenities — and get alerted the moment they&apos;re hot.
               </p>
-              <ul className="space-y-4">
+
+              <div className="space-y-4">
                 {[
-                  "Narrates tours room-by-room with project knowledge",
-                  "Answers price, EMI, RERA questions instantly",
-                  "Scores buyer intent in real-time (0-10)",
-                  "Triggers WhatsApp alert when buyer is hot",
+                  { signal: "Spent 3+ minutes on tour", pts: "+2" },
+                  { signal: "Asked about price or EMI", pts: "+3" },
+                  { signal: "Revisited rooms", pts: "+2" },
+                  { signal: "Returned within 24 hours", pts: "+2" },
+                  { signal: "Clicked 'Book Visit'", pts: "+4" },
                 ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <span className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xs flex-shrink-0 mt-0.5">✓</span>
-                    <span className="text-slate-700">{item}</span>
-                  </li>
+                  <div key={i} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                    <span className="text-gray-700">{item.signal}</span>
+                    <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-semibold">{item.pts}</span>
+                  </div>
                 ))}
-              </ul>
+              </div>
+
+              <div className="mt-8 p-4 bg-orange-50 border border-orange-200 rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🔥</span>
+                  <div>
+                    <p className="font-semibold text-orange-900">Score reaches 7/10</p>
+                    <p className="text-sm text-orange-700">You get instant WhatsApp alert with buyer details</p>
+                  </div>
+                </div>
+              </div>
             </div>
+
             <div className="relative">
-              <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-6 shadow-2xl">
-                <div className="bg-slate-700/50 rounded-2xl p-4 mb-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <PriyaAvatar size="header" isSpeaking />
-                    <div>
-                      <p className="text-white text-sm font-medium">Priya</p>
-                      <p className="text-slate-400 text-xs">AI Tour Guide</p>
-                    </div>
+              <img
+                src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80"
+                alt="Luxury apartment balcony view"
+                className="rounded-3xl shadow-2xl"
+              />
+              {/* Floating notification card */}
+              <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl p-4 shadow-xl border border-gray-100 max-w-[280px]">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-lg">🔥</span>
                   </div>
-                  <div className="bg-slate-600/50 rounded-xl p-3">
-                    <p className="text-sm text-slate-200 leading-relaxed">
-                      &quot;The 2BHK starts at ₹85 lakhs with a carpet area of 650 sq ft. 
-                      EMI would be approximately ₹52,000/month for a 20-year loan at 8.5%. 
-                      Would you like me to tell you about the payment plan?&quot;
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-slate-700 rounded-full px-4 py-2">
-                    <p className="text-slate-400 text-sm">What is the EMI for 2BHK?</p>
-                  </div>
-                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">Hot Lead Alert!</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Priya Sharma • Score 8/10</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Asked about EMI for 2BHK</p>
                   </div>
                 </div>
               </div>
@@ -270,68 +235,33 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== LEAD SCORING ===== */}
-      <section className="py-24 px-6 bg-white">
-        <div className="max-w-5xl mx-auto text-center">
-          <h2 className="text-4xl font-bold text-slate-900 mb-4">
-            Know Exactly Who&apos;s Ready to Buy
-          </h2>
-          <p className="text-lg text-slate-500 mb-16 max-w-2xl mx-auto">
-            Every buyer interaction is scored. When intent is high, you know instantly.
-          </p>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-12">
-            {[
-              { signal: "Viewed 3+ min", points: "+2", color: "bg-blue-50 text-blue-700 border-blue-200" },
-              { signal: "Asked about price", points: "+2", color: "bg-purple-50 text-purple-700 border-purple-200" },
-              { signal: "Asked about EMI", points: "+3", color: "bg-pink-50 text-pink-700 border-pink-200" },
-              { signal: "Revisited rooms", points: "+2", color: "bg-amber-50 text-amber-700 border-amber-200" },
-              { signal: "Return visit", points: "+2", color: "bg-teal-50 text-teal-700 border-teal-200" },
-              { signal: "Shared tour", points: "+1", color: "bg-green-50 text-green-700 border-green-200" },
-              { signal: "Booked visit", points: "+4", color: "bg-red-50 text-red-700 border-red-200" },
-              { signal: "Score ≥ 7", points: "🔥 ALERT", color: "bg-orange-50 text-orange-700 border-orange-200" },
-            ].map((item, i) => (
-              <div key={i} className={`${item.color} border rounded-2xl p-4 text-center`}>
-                <div className="text-lg font-bold">{item.points}</div>
-                <div className="text-xs mt-1 opacity-80">{item.signal}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="inline-flex items-center gap-3 px-6 py-3 bg-orange-50 border border-orange-200 rounded-full">
-            <span className="text-2xl">📱</span>
-            <span className="text-sm text-orange-800 font-medium">Score hits 7 → Instant WhatsApp alert with buyer details</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ===== USER GUIDE ===== */}
-      <section className="py-24 px-6 bg-gradient-to-b from-slate-50 to-white">
+      {/* ===== QUICK START GUIDE ===== */}
+      <section id="guide" className="py-24 md:py-32 px-6 bg-gray-50">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">Quick Start Guide</h2>
-            <p className="text-slate-500">Get your first hot lead in under 5 minutes</p>
+            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">Get Started</p>
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              Your first lead in 5 minutes
+            </h2>
+            <p className="text-gray-500 text-lg">No setup fees. No credit card. Just results.</p>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-1">
             {[
-              { step: "1", title: "Login with OTP", desc: "Enter your phone number → receive OTP → you're in. No passwords to remember.", time: "30 sec" },
-              { step: "2", title: "Browse Your Projects", desc: "See all builder projects assigned to you. Each shows tour status and location.", time: "10 sec" },
-              { step: "3", title: "Share Tour on WhatsApp", desc: "Tap 'Share on WhatsApp' → a branded link with preview card is ready to send to any buyer.", time: "5 sec" },
-              { step: "4", title: "Buyer Explores with Priya", desc: "Buyer opens the link → sees AI-narrated virtual tour → asks questions → engagement is scored automatically.", time: "2-5 min" },
-              { step: "5", title: "Get Hot Lead Alert", desc: "When buyer shows high intent (score 7+), you get instant WhatsApp notification with their details.", time: "< 3 sec" },
-              { step: "6", title: "Follow Up & Close", desc: "Call the buyer while they're still engaged. You know exactly what they asked about.", time: "You decide" },
+              { step: "1", title: "Login with your phone", desc: "Enter your mobile number, receive OTP, and you're in. Takes 30 seconds.", icon: "📱" },
+              { step: "2", title: "See your assigned projects", desc: "Your builder's projects appear automatically with tour status and location details.", icon: "🏗️" },
+              { step: "3", title: "Share a tour on WhatsApp", desc: "One tap generates a branded link. Send to buyers directly from WhatsApp.", icon: "📲" },
+              { step: "4", title: "Buyer explores with AI guide", desc: "They see rooms, ask questions, get instant answers about price, EMI, amenities.", icon: "🤖" },
+              { step: "5", title: "Score reaches 7 — you get alerted", desc: "WhatsApp notification arrives: buyer name, phone, what they're interested in.", icon: "🔔" },
+              { step: "6", title: "Call and close", desc: "You know exactly what they want. Follow up while they're still engaged.", icon: "🤝" },
             ].map((item, i) => (
-              <div key={i} className="flex gap-6 items-start group">
-                <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center text-lg font-bold flex-shrink-0 group-hover:scale-110 transition-transform shadow-lg shadow-blue-200">
-                  {item.step}
+              <div key={i} className="flex gap-5 items-start p-5 rounded-2xl hover:bg-white hover:shadow-lg transition-all duration-300 group">
+                <div className="w-12 h-12 bg-white border-2 border-gray-200 group-hover:border-blue-500 group-hover:bg-blue-50 rounded-2xl flex items-center justify-center text-xl transition-all flex-shrink-0">
+                  {item.icon}
                 </div>
-                <div className="flex-1 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm group-hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-bold text-slate-900">{item.title}</h3>
-                    <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-full">{item.time}</span>
-                  </div>
-                  <p className="text-slate-500 text-sm">{item.desc}</p>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">{item.title}</h3>
+                  <p className="text-gray-500 text-sm">{item.desc}</p>
                 </div>
               </div>
             ))}
@@ -339,51 +269,51 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== CTA SECTION ===== */}
-      <section className="py-24 px-6 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-10 left-10 w-64 h-64 bg-white rounded-full blur-3xl" />
-          <div className="absolute bottom-10 right-10 w-96 h-96 bg-cyan-300 rounded-full blur-3xl" />
+      {/* ===== FINAL CTA ===== */}
+      <section className="py-24 md:py-32 px-6 relative overflow-hidden">
+        <div className="absolute inset-0">
+          <img
+            src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1920&q=80"
+            alt="Modern residential building"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gray-900/85" />
         </div>
-        
-        <div className="max-w-3xl mx-auto text-center relative z-10">
-          <div className="inline-block mb-6">
-            <PriyaAvatar size="cta" isSpeaking />
-          </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Ready to Close More Deals?
+
+        <div className="relative max-w-3xl mx-auto text-center">
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
+            Stop waiting for buyers to call.
+            <br />
+            <span className="text-blue-400">Start knowing when they&apos;re ready.</span>
           </h2>
-          <p className="text-xl text-blue-100/80 mb-10 max-w-xl mx-auto">
-            Join Channel Partners who are generating 10x more qualified leads with AI-powered tours.
+          <p className="text-xl text-gray-300 mb-10 max-w-xl mx-auto">
+            Every tour you share is a lead machine working 24/7. 
+            Priya qualifies buyers while you focus on closing.
           </p>
           <Link
             href="/login"
-            className="inline-block px-10 py-5 bg-white text-blue-700 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-white/20 hover:-translate-y-1 transition-all duration-300"
+            className="inline-flex items-center justify-center px-10 py-5 bg-white text-gray-900 rounded-full text-lg font-bold shadow-2xl hover:-translate-y-1 transition-all duration-300"
           >
-            Login & Start Sharing Tours →
+            Start Now — It&apos;s Free →
           </Link>
-          <p className="text-blue-200/60 text-sm mt-6">
-            Free to try • No credit card required • OTP login in 30 seconds
-          </p>
+          <p className="text-gray-400 text-sm mt-6">OTP login • No passwords • Live in 30 seconds</p>
         </div>
       </section>
 
       {/* ===== FOOTER ===== */}
-      <footer className="py-12 px-6 bg-slate-900 text-center">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <PriyaAvatar size="badge" isSpeaking={false} />
-            <span className="text-xl font-bold text-white">AutoMind AI</span>
+      <footer className="py-12 px-6 bg-white border-t border-gray-100">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-xs">A</span>
+            </div>
+            <span className="font-bold text-gray-900">AutoMind AI</span>
+            <span className="text-gray-400 text-sm ml-2">— AI Virtual Tours for Real Estate</span>
           </div>
-          <p className="text-slate-400 text-sm mb-6">
-            AI-Powered Virtual Tours for Real Estate Channel Partners
-          </p>
-          <div className="flex items-center justify-center gap-6 text-sm text-slate-500">
-            <Link href="/login" className="hover:text-white transition-colors">Login</Link>
-            <span>•</span>
-            <a href="https://api.automindai.info/docs" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">API Docs</a>
-            <span>•</span>
-            <span>© 2026 AutoMind AI</span>
+          <div className="flex items-center gap-6 text-sm text-gray-500">
+            <Link href="/login" className="hover:text-gray-900 transition-colors">CP Login</Link>
+            <a href="https://api.automindai.info/docs" target="_blank" rel="noopener noreferrer" className="hover:text-gray-900 transition-colors">API</a>
+            <span>© 2026 AutoMind AI Platform</span>
           </div>
         </div>
       </footer>
