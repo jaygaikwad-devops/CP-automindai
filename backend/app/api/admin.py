@@ -40,10 +40,12 @@ router = APIRouter()
 async def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
     """Require the current user to have admin role.
 
+    In development mode, CP users are allowed admin access for testing.
+
     Raises:
-        HTTPException: 403 if user is not an admin.
+        HTTPException: 403 if user is not an admin (production only).
     """
-    if current_user.get("role") != "admin":
+    if settings.environment != "development" and current_user.get("role") != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",
