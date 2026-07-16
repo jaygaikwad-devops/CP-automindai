@@ -59,6 +59,7 @@ function TourPage() {
   const [wsSpeaking, setWsSpeaking] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showContact, setShowContact] = useState(false);
+  const [showDownload, setShowDownload] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
   const [showNarration, setShowNarration] = useState(true);
   const [narrationPlayed, setNarrationPlayed] = useState<Set<number>>(new Set());
@@ -373,10 +374,37 @@ function TourPage() {
           onSubmit={(name, phone) => {
             postEvent("visit_booking_clicked", { buyer_name: name, buyer_phone: phone });
             setShowContact(false);
-            alert(`Thank you ${name}! Our agent will call you at +91 ${phone} shortly. You can also download the project brochure.`);
+            setShowDownload(true);
           }}
           onClose={() => setShowContact(false)}
         />
+      )}
+
+      {/* Download brochure overlay - shows after contact info collected */}
+      {showDownload && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 text-center">
+            <div className="text-4xl mb-3">✅</div>
+            <h2 className="text-lg font-bold text-gray-900 mb-2">Thank You!</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Our agent will contact you shortly. Meanwhile, download the project brochure.
+            </p>
+            <a
+              href={`${API_BASE}/api/v1/tours/brochure/${linkId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition-colors mb-3"
+            >
+              📄 Download Brochure (PDF)
+            </a>
+            <button
+              onClick={() => setShowDownload(false)}
+              className="w-full py-2.5 text-gray-500 text-sm hover:text-gray-700"
+            >
+              Continue Tour
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

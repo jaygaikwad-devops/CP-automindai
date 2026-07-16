@@ -84,6 +84,79 @@ async def get_narration_audio(text: str):
         raise HTTPException(status_code=503, detail="Voice narration temporarily unavailable")
 
 
+@router.get("/brochure/{link_id}")
+async def download_brochure(
+    link_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Serve project brochure PDF for download.
+
+    Looks up the share link to find the project, then returns
+    the brochure asset. For demo, returns a generated PDF placeholder.
+    In production, this would serve from S3.
+    """
+    try:
+        link_uuid = uuid.UUID(link_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid link ID")
+
+    result = await db.execute(select(ShareLink).where(ShareLink.id == link_uuid))
+    share_link = result.scalar_one_or_none()
+    if not share_link:
+        raise HTTPException(status_code=404, detail="Link not found")
+
+    proj_result = await db.execute(select(Project).where(Project.id == share_link.project_id))
+    project = proj_result.scalar_one_or_none()
+    project_name = project.name if project else "Project"
+
+    # In production: fetch PDF from S3 (project_assets table, asset_type='brochure')
+    # For demo: return a simple text file as placeholder
+    content = f"""
+    ╔══════════════════════════════════════════════╗
+    ║         {project_name}                      ║
+    ║         Project Brochure                     ║
+    ╚══════════════════════════════════════════════╝
+
+    Location: {project.location if project else 'N/A'}
+    Unit Types: {', '.join(project.unit_types or []) if project else 'N/A'}
+    RERA Registration: MH/2024/45678
+
+    ─────────────────────────────────────────────────
+    HIGHLIGHTS:
+    • Premium Italian Marble Flooring
+    • Modular Kitchen with Chimney & Hob
+    • 24/7 Security with CCTV
+    • Swimming Pool, Gym & Clubhouse
+    • Jogging Track & Children's Play Area
+    • 2 Covered Car Parkings
+    ─────────────────────────────────────────────────
+
+    PRICING:
+    • 2 BHK: Starting ₹85 Lakhs*
+    • 3 BHK: Starting ₹1.15 Crore*
+    • 4 BHK: Starting ₹1.65 Crore*
+    (*Plus applicable taxes and charges)
+
+    EMI Starting: ₹52,000/month (20 years, 8.5%)
+    ─────────────────────────────────────────────────
+
+    CONTACT:
+    Visit: app.automindai.info
+    ─────────────────────────────────────────────────
+
+    This is an AI-generated brochure from AutoMind AI Platform.
+    For full brochure with images, contact your Channel Partner.
+    """
+
+    return StreamingResponse(
+        iter([content.encode()]),
+        media_type="text/plain",
+        headers={
+            "Content-Disposition": f'attachment; filename="{project_name.replace(" ", "_")}_Brochure.txt"',
+        },
+    )
+
+
 VALID_EVENT_TYPES = {
     "room_viewed",
     "room_revisited",
@@ -331,6 +404,16 @@ async def post_tour_event(
         event_type=body.type,
         data=body.data,
     )
+
+    # If visit_booking_clicked, save buyer contact info to session
+    if body.type == "visit_booking_clicked":
+        buyer_name = body.data.get("buyer_name")
+        buyer_phone = body.data.get("buyer_phone")
+        if buyer_name or buyer_phone:
+            try:
+                await repo.update_buyer_info(session_id, buyer_name, buyer_phone)
+            except Exception as e:
+                logger.warning(f"Could not update buyer info for {session_id}: {e}")
 
     # Build signal list from existing signals + new event
     existing_signals = session.get("signals", {})

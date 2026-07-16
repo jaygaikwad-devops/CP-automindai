@@ -196,6 +196,43 @@ class SessionRepository:
             )
         return response.get("Attributes")
 
+    async def update_buyer_info(
+        self,
+        session_id: str,
+        buyer_name: str | None = None,
+        buyer_phone: str | None = None,
+    ) -> None:
+        """Update buyer contact information on a session.
+
+        Called when buyer submits the contact/brochure form.
+
+        Args:
+            session_id: The session identifier.
+            buyer_name: Buyer's name.
+            buyer_phone: Buyer's phone number.
+        """
+        update_parts = []
+        values = {}
+
+        if buyer_name:
+            update_parts.append("buyer_name = :bn")
+            values[":bn"] = buyer_name
+        if buyer_phone:
+            update_parts.append("buyer_phone = :bp")
+            values[":bp"] = buyer_phone
+
+        if not update_parts:
+            return
+
+        session = _get_session()
+        async with session.resource("dynamodb", **self._get_resource_kwargs()) as dynamodb:
+            table = await dynamodb.Table(self._table_name)
+            await table.update_item(
+                Key={"PK": f"SESSION#{session_id}", "SK": "META"},
+                UpdateExpression=f"SET {', '.join(update_parts)}",
+                ExpressionAttributeValues=values,
+            )
+
     async def add_event(
         self,
         session_id: str,
