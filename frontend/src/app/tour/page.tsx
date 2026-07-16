@@ -334,12 +334,23 @@ function TourPage() {
           <span className="font-medium">{showChat ? "Close" : "Ask Aria"}</span>
         </button>
 
-        <button
-          onClick={() => setShowContact(true)}
-          className="px-5 py-2.5 bg-blue-500 text-white rounded-full text-sm font-bold shadow-lg hover:bg-blue-600 transition-all"
-        >
-          📞 Contact Agent
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              // Show contact form — brochure is sent after contact info collected
+              setShowContact(true);
+            }}
+            className="px-4 py-2.5 bg-white/10 text-white rounded-full text-xs font-medium border border-white/20 hover:bg-white/20 transition-all"
+          >
+            📄 Brochure
+          </button>
+          <button
+            onClick={() => setShowContact(true)}
+            className="px-5 py-2.5 bg-blue-500 text-white rounded-full text-sm font-bold shadow-lg hover:bg-blue-600 transition-all"
+          >
+            📞 Contact
+          </button>
+        </div>
       </div>
 
       {/* Chat panel */}
