@@ -98,15 +98,8 @@ function TourPage() {
     loadTour();
   }, [linkId]);
 
-  // Auto-narrate first room after load
-  useEffect(() => {
-    if (tourScript && !narrationPlayed.has(0)) {
-      setTimeout(() => {
-        speak(tourScript.rooms[0].narration.text);
-        setNarrationPlayed(new Set([0]));
-      }, 1000);
-    }
-  }, [tourScript]);
+  // Don't auto-narrate — browsers block audio without user gesture
+  // User must tap "Listen" or navigate to trigger voice
 
   // WebSocket
   useEffect(() => {
@@ -265,12 +258,26 @@ function TourPage() {
                     <p className="text-sm text-gray-800 leading-relaxed">{room.narration.text}</p>
                   </div>
                 </div>
-                {/* Replay voice button */}
+                {/* Voice narration button */}
                 <button
-                  onClick={() => speak(room.narration.text)}
-                  className="mt-2 ml-12 text-xs text-blue-600 hover:text-blue-800 font-medium"
+                  onClick={() => {
+                    speak(room.narration.text);
+                    setNarrationPlayed((prev) => new Set([...prev, currentRoomIndex]));
+                  }}
+                  className="mt-3 ml-12 flex items-center gap-2 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full text-xs font-semibold transition-colors"
                 >
-                  🔊 Listen again
+                  {isSpeaking ? (
+                    <>
+                      <span className="flex items-center gap-0.5">
+                        <span className="w-1 h-2 bg-blue-500 rounded-full animate-pulse" />
+                        <span className="w-1 h-3 bg-blue-500 rounded-full animate-pulse [animation-delay:100ms]" />
+                        <span className="w-1 h-2 bg-blue-500 rounded-full animate-pulse [animation-delay:200ms]" />
+                      </span>
+                      Speaking...
+                    </>
+                  ) : (
+                    <>🔊 {narrationPlayed.has(currentRoomIndex) ? "Listen again" : "Listen to Aria"}</>
+                  )}
                 </button>
               </div>
             </div>
