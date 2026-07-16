@@ -362,7 +362,7 @@ function TourPage() {
           onSubmit={(name, phone) => {
             postEvent("visit_booking_clicked", { buyer_name: name, buyer_phone: phone });
             setShowContact(false);
-            alert(`Thank you ${name}! Our agent will call you at +91 ${phone} shortly.`);
+            alert(`Thank you ${name}! Our agent will call you at +91 ${phone} shortly. You can also download the project brochure.`);
           }}
           onClose={() => setShowContact(false)}
         />

@@ -1,19 +1,23 @@
 """Tour endpoints for buyer session interactions and tour script loading.
 
-Handles tour loading, events such as room views, revisits, time tracking,
-visit booking clicks, and WhatsApp share clicks.
+Handles tour loading, narration audio (AWS Polly), events such as room views,
+revisits, time tracking, visit booking clicks, and WhatsApp share clicks.
 """
 
+import hashlib
 import logging
 import uuid
 from datetime import timedelta
 from typing import Any
 
+import aioboto3
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import create_access_token
 from app.models.project import Project
@@ -24,6 +28,61 @@ from app.services.lead_engine import calculate_score, check_and_alert, persist_s
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# ---- Narration Audio Cache (in-memory for demo, use S3 in production) ----
+_audio_cache: dict[str, bytes] = {}
+
+
+@router.get("/narrate")
+async def get_narration_audio(text: str):
+    """Generate speech audio from text using AWS Polly.
+
+    Uses the 'Kajal' neural voice (Indian English female).
+    Caches audio by text hash to avoid repeated Polly calls.
+    Returns MP3 audio stream.
+    """
+    if not text or len(text) > 1000:
+        raise HTTPException(status_code=400, detail="Text must be 1-1000 characters")
+
+    # Check cache
+    text_hash = hashlib.md5(text.encode()).hexdigest()
+    if text_hash in _audio_cache:
+        return StreamingResponse(
+            iter([_audio_cache[text_hash]]),
+            media_type="audio/mpeg",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+
+    # Call AWS Polly
+    try:
+        session = aioboto3.Session(
+            aws_access_key_id=settings.aws_access_key_id or None,
+            aws_secret_access_key=settings.aws_secret_access_key or None,
+            region_name=settings.aws_region,
+        )
+        async with session.client("polly") as polly:
+            response = await polly.synthesize_speech(
+                Text=text,
+                OutputFormat="mp3",
+                VoiceId="Kajal",  # Indian English female neural voice
+                Engine="neural",
+                LanguageCode="en-IN",
+            )
+            audio_stream = response["AudioStream"]
+            audio_bytes = await audio_stream.read()
+
+        # Cache it
+        _audio_cache[text_hash] = audio_bytes
+
+        return StreamingResponse(
+            iter([audio_bytes]),
+            media_type="audio/mpeg",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+    except Exception as e:
+        logger.error(f"Polly TTS failed: {e}")
+        raise HTTPException(status_code=503, detail="Voice narration temporarily unavailable")
+
 
 VALID_EVENT_TYPES = {
     "room_viewed",
