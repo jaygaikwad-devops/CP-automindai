@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import PriyaAvatar from "./PriyaAvatar";
+import AriaAvatar from "./AriaAvatar";
 
 interface ChatMessage {
   id: string;
-  role: "user" | "priya";
+  role: "user" | "aria";
   text: string;
   streaming?: boolean;
 }
@@ -19,8 +19,8 @@ export default function ChatInterface({ ws, isSpeaking }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
-      role: "priya",
-      text: "Hi! I'm Priya, your AI tour guide. Ask me anything about this property — pricing, amenities, floor plans, or anything else!",
+      role: "aria",
+      text: "Hi! I'm Aria, your AI property guide. Ask me anything — pricing, EMI options, floor plans, amenities, or RERA details. I'm here to help!",
     },
   ]);
   const [input, setInput] = useState("");
@@ -28,12 +28,10 @@ export default function ChatInterface({ ws, isSpeaking }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const streamingRef = useRef<string>("");
 
-  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Listen for WebSocket messages
   useEffect(() => {
     if (!ws) return;
 
@@ -46,10 +44,7 @@ export default function ChatInterface({ ws, isSpeaking }: ChatInterfaceProps) {
           setMessages((prev) => {
             const last = prev[prev.length - 1];
             if (last?.streaming) {
-              return [
-                ...prev.slice(0, -1),
-                { ...last, text: streamingRef.current },
-              ];
+              return [...prev.slice(0, -1), { ...last, text: streamingRef.current }];
             }
             return prev;
           });
@@ -59,42 +54,29 @@ export default function ChatInterface({ ws, isSpeaking }: ChatInterfaceProps) {
           setMessages((prev) => {
             const last = prev[prev.length - 1];
             if (last?.streaming) {
-              return [
-                ...prev.slice(0, -1),
-                { ...last, text: data.full_response, streaming: false },
-              ];
+              return [...prev.slice(0, -1), { ...last, text: data.full_response, streaming: false }];
             }
             return prev;
           });
         } else if (data.type === "talking_start") {
-          // Create streaming message placeholder
           streamingRef.current = "";
           setMessages((prev) => [
             ...prev,
-            { id: `priya-${Date.now()}`, role: "priya", text: "", streaming: true },
+            { id: `aria-${Date.now()}`, role: "aria", text: "", streaming: true },
           ]);
         } else if (data.type === "error" && data.code === "KB_TIMEOUT") {
           setSending(false);
           setMessages((prev) => {
             const last = prev[prev.length - 1];
             if (last?.streaming) {
-              return [
-                ...prev.slice(0, -1),
-                {
-                  ...last,
-                  text: "Sorry, I'm having trouble finding that information. Please try again.",
-                  streaming: false,
-                },
-              ];
+              return [...prev.slice(0, -1), { ...last, text: "I'm having trouble finding that information. Let me try a different approach — could you rephrase your question?", streaming: false }];
             }
             return prev;
           });
         } else if (data.type === "error" && data.code === "INVALID_MESSAGE") {
           setSending(false);
         }
-      } catch {
-        // Non-JSON or unrelated message
-      }
+      } catch { /* ignore */ }
     };
 
     ws.addEventListener("message", handleMessage);
@@ -103,59 +85,50 @@ export default function ChatInterface({ ws, isSpeaking }: ChatInterfaceProps) {
 
   const sendMessage = () => {
     if (!ws || !input.trim() || input.length > 500 || sending) return;
-
     const text = input.trim();
-    setMessages((prev) => [
-      ...prev,
-      { id: `user-${Date.now()}`, role: "user", text },
-    ]);
+    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", text }]);
     setInput("");
     setSending(true);
-
     ws.send(JSON.stringify({ action: "chat", message: text }));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-gray-100">
+    <div className="flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-gray-100">
-        <PriyaAvatar size="header" isSpeaking={isSpeaking} />
-        <div>
-          <p className="text-sm font-medium text-gray-900">Priya</p>
-          <p className="text-xs text-gray-500">AI Tour Guide</p>
+      <div className="flex items-center gap-3 p-4 border-b border-gray-100 bg-gray-50/50">
+        <AriaAvatar size="sm" isSpeaking={isSpeaking} />
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-gray-900">Aria</p>
+          <p className="text-xs text-gray-500">AI Property Guide • Online</p>
         </div>
         {isSpeaking && (
-          <span className="ml-auto text-xs text-green-600 animate-pulse">Speaking...</span>
+          <div className="flex items-center gap-1">
+            <span className="w-1 h-3 bg-blue-500 rounded-full animate-pulse" />
+            <span className="w-1 h-4 bg-blue-500 rounded-full animate-pulse [animation-delay:150ms]" />
+            <span className="w-1 h-2 bg-blue-500 rounded-full animate-pulse [animation-delay:300ms]" />
+          </div>
         )}
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[400px]">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[350px]">
         {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            {msg.role === "priya" && <PriyaAvatar size="badge" isSpeaking={msg.streaming} />}
-            <div
-              className={`max-w-[80%] rounded-xl px-4 py-2 text-sm ${
-                msg.role === "user"
-                  ? "bg-primary-600 text-white"
-                  : "bg-gray-100 text-gray-800"
-              }`}
-            >
+          <div key={msg.id} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+            {msg.role === "aria" && <AriaAvatar size="sm" isSpeaking={msg.streaming} />}
+            <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+              msg.role === "user"
+                ? "bg-blue-600 text-white rounded-br-md"
+                : "bg-gray-100 text-gray-800 rounded-bl-md"
+            }`}>
               {msg.text || (msg.streaming ? (
-                <span className="inline-flex gap-1">
-                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
-                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                <span className="inline-flex gap-1 py-1">
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
                 </span>
               ) : "")}
             </div>
@@ -165,22 +138,22 @@ export default function ChatInterface({ ws, isSpeaking }: ChatInterfaceProps) {
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-gray-100">
+      <div className="p-4 border-t border-gray-100 bg-white">
         <div className="flex items-center gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value.slice(0, 500))}
             onKeyDown={handleKeyDown}
-            placeholder="Ask Priya about this property..."
+            placeholder="Ask about price, EMI, amenities..."
             disabled={sending || !ws}
-            className="flex-1 px-4 py-2.5 rounded-full border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 disabled:opacity-50"
+            className="flex-1 px-4 py-3 rounded-full border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 disabled:opacity-50 bg-gray-50"
             maxLength={500}
           />
           <button
             onClick={sendMessage}
             disabled={!input.trim() || sending || !ws}
-            className="p-2.5 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-md"
             aria-label="Send message"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -188,7 +161,6 @@ export default function ChatInterface({ ws, isSpeaking }: ChatInterfaceProps) {
             </svg>
           </button>
         </div>
-        <p className="text-xs text-gray-400 mt-1 text-right">{input.length}/500</p>
       </div>
     </div>
   );
