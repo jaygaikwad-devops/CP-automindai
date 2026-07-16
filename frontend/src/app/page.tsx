@@ -135,7 +135,7 @@ export default function LandingPage() {
               },
               {
                 num: "03",
-                title: "Priya Answers Questions",
+                title: "Aria Answers Questions",
                 desc: "Our AI avatar answers price, EMI, RERA, floor plan questions in real-time. Every interaction is scored.",
                 img: "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=600&q=80",
               },
@@ -225,7 +225,7 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-gray-900">Hot Lead Alert!</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Priya Sharma • Score 8/10</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Aria Sharma • Score 8/10</p>
                     <p className="text-xs text-gray-400 mt-0.5">Asked about EMI for 2BHK</p>
                   </div>
                 </div>
@@ -288,7 +288,7 @@ export default function LandingPage() {
           </h2>
           <p className="text-xl text-gray-300 mb-10 max-w-xl mx-auto">
             Every tour you share is a lead machine working 24/7. 
-            Priya qualifies buyers while you focus on closing.
+            Aria qualifies buyers while you focus on closing.
           </p>
           <Link
             href="/login"

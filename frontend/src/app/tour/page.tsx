@@ -2,9 +2,10 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, useRef, useCallback } from "react";
-import PriyaAvatar from "@/components/PriyaAvatar";
+import AriaAvatar from "@/components/AriaAvatar";
 import ChatInterface from "@/components/ChatInterface";
 import ContactForm from "@/components/ContactForm";
+import { useVoiceNarration } from "@/hooks/useVoiceNarration";
 
 interface Room {
   index: number;
@@ -29,7 +30,14 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
 export default function TourPageWrapper() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-900"><div className="text-center"><PriyaAvatar size="cta" isSpeaking /><p className="text-white mt-4">Loading your tour...</p></div></div>}>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-center">
+          <AriaAvatar size="lg" isSpeaking />
+          <p className="text-white mt-4 text-sm animate-pulse">Aria is preparing your tour...</p>
+        </div>
+      </div>
+    }>
       <TourPage />
     </Suspense>
   );
@@ -38,6 +46,7 @@ export default function TourPageWrapper() {
 function TourPage() {
   const searchParams = useSearchParams();
   const linkId = searchParams.get("id") || "";
+  const { speak, stop, isSpeaking: voiceSpeaking } = useVoiceNarration();
 
   const [tourScript, setTourScript] = useState<TourScript | null>(null);
   const [currentRoomIndex, setCurrentRoomIndex] = useState(0);
@@ -47,11 +56,14 @@ function TourPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [ws, setWs] = useState<WebSocket | null>(null);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [wsSpeaking, setWsSpeaking] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
   const [showNarration, setShowNarration] = useState(true);
+  const [narrationPlayed, setNarrationPlayed] = useState<Set<number>>(new Set());
+
+  const isSpeaking = voiceSpeaking || wsSpeaking;
 
   const viewedRooms = useRef<Set<number>>(new Set());
   const roomEnteredAt = useRef<number>(Date.now());
@@ -59,10 +71,9 @@ function TourPage() {
   const timeThresholdFired = useRef(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load tour from API
+  // Load tour
   useEffect(() => {
     if (!linkId) { setError("No tour link provided."); setLoading(false); return; }
-
     async function loadTour() {
       try {
         const res = await fetch(`${API_BASE}/api/v1/tours/link/${linkId}`);
@@ -87,7 +98,17 @@ function TourPage() {
     loadTour();
   }, [linkId]);
 
-  // WebSocket connection for Priya chat
+  // Auto-narrate first room after load
+  useEffect(() => {
+    if (tourScript && !narrationPlayed.has(0)) {
+      setTimeout(() => {
+        speak(tourScript.rooms[0].narration.text);
+        setNarrationPlayed(new Set([0]));
+      }, 1000);
+    }
+  }, [tourScript]);
+
+  // WebSocket
   useEffect(() => {
     if (!sessionId || !sessionToken) return;
     const wsUrl = `${API_BASE.replace("https://", "wss://").replace("http://", "ws://")}/ws/tour/${sessionId}?session_token=${sessionToken}`;
@@ -96,11 +117,11 @@ function TourPage() {
     socket.onmessage = (event) => {
       try {
         const d = JSON.parse(event.data);
-        if (d.type === "talking_start") setIsSpeaking(true);
-        if (d.type === "talking_end") setIsSpeaking(false);
+        if (d.type === "talking_start") setWsSpeaking(true);
+        if (d.type === "talking_end") setWsSpeaking(false);
       } catch { /* ignore */ }
     };
-    socket.onclose = () => { setWs(null); setIsSpeaking(false); };
+    socket.onclose = () => { setWs(null); setWsSpeaking(false); };
     return () => { socket.close(); };
   }, [sessionId, sessionToken]);
 
@@ -128,44 +149,53 @@ function TourPage() {
     } catch { /* non-critical */ }
   }, [sessionId]);
 
-  const navigateRoom = (dir: "next" | "prev") => {
-    if (!tourScript || transitioning) return;
-    const n = dir === "next" ? currentRoomIndex + 1 : currentRoomIndex - 1;
-    if (n < 0 || n >= tourScript.rooms.length) return;
+  const navigateRoom = (newIndex: number) => {
+    if (!tourScript || transitioning || newIndex < 0 || newIndex >= tourScript.rooms.length || newIndex === currentRoomIndex) return;
 
-    // Track current room view time
+    // Stop current narration
+    stop();
+
+    // Track time on current room
     const timeSpent = Math.floor((Date.now() - roomEnteredAt.current) / 1000);
     postEvent("room_viewed", { room_id: tourScript.rooms[currentRoomIndex].id, duration_seconds: timeSpent });
 
     // Check revisit
-    if (viewedRooms.current.has(n)) {
-      postEvent("room_revisited", { room_id: tourScript.rooms[n].id });
+    if (viewedRooms.current.has(newIndex)) {
+      postEvent("room_revisited", { room_id: tourScript.rooms[newIndex].id });
     }
-    viewedRooms.current.add(n);
+    viewedRooms.current.add(newIndex);
 
+    // Transition
     setTransitioning(true);
     setShowNarration(false);
     setTimeout(() => {
-      setCurrentRoomIndex(n);
+      setCurrentRoomIndex(newIndex);
       roomEnteredAt.current = Date.now();
       setTransitioning(false);
-      setTimeout(() => setShowNarration(true), 500);
+      setTimeout(() => {
+        setShowNarration(true);
+        // Auto-narrate new room
+        if (!narrationPlayed.has(newIndex)) {
+          speak(tourScript.rooms[newIndex].narration.text);
+          setNarrationPlayed((prev) => new Set([...prev, newIndex]));
+        }
+      }, 400);
     }, 300);
   };
 
-  // Loading state
+  // Loading
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-center">
-          <PriyaAvatar size="cta" isSpeaking />
-          <p className="text-white mt-4 text-sm animate-pulse">Preparing your virtual tour...</p>
+          <AriaAvatar size="lg" isSpeaking />
+          <p className="text-white mt-4 text-sm animate-pulse">Aria is preparing your tour...</p>
         </div>
       </div>
     );
   }
 
-  // Error state
+  // Error
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
@@ -187,14 +217,12 @@ function TourPage() {
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col">
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 to-transparent px-4 py-3 flex items-center justify-between z-20">
+      <header className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent px-4 py-4 flex items-center justify-between z-20">
         <div className="flex items-center gap-3">
-          <PriyaAvatar size="header" isSpeaking={isSpeaking} />
+          <AriaAvatar size="sm" isSpeaking={isSpeaking} />
           <div>
-            <p className="text-sm font-medium text-white">{projectName || tourScript.project_name}</p>
-            <p className="text-xs text-gray-300">
-              Room {currentRoomIndex + 1} of {tourScript.total_rooms} • {room.name}
-            </p>
+            <p className="text-sm font-semibold text-white">{projectName}</p>
+            <p className="text-xs text-gray-300">{room.name} • {currentRoomIndex + 1}/{tourScript.total_rooms}</p>
           </div>
         </div>
         <button
@@ -205,41 +233,53 @@ function TourPage() {
         </button>
       </header>
 
-      {/* Room Display - Full screen background */}
+      {/* Room Display */}
       <div className="flex-1 relative overflow-hidden">
         <div
-          className={`absolute inset-0 transition-opacity duration-300 ${transitioning ? "opacity-0" : "opacity-100"}`}
-          style={{
-            backgroundImage: `url(${room.visuals.primary_image_url})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
+          className={`absolute inset-0 transition-all duration-500 ${transitioning ? "opacity-0 scale-105" : "opacity-100 scale-100"}`}
+          style={{ backgroundImage: `url(${room.visuals.primary_image_url})`, backgroundSize: "cover", backgroundPosition: "center" }}
         >
-          {/* Gradient overlay for text readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/50" />
         </div>
 
-        {/* Room content overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 pb-20 z-10">
-          {/* Priya narration bubble */}
+        {/* Bottom content */}
+        <div className="absolute bottom-0 left-0 right-0 p-5 pb-24 z-10">
+          {/* Aria narration card */}
           {showNarration && (
-            <div className="max-w-lg mx-auto mb-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-4 shadow-xl">
+            <div className="max-w-md mx-auto mb-5 animate-in fade-in slide-in-from-bottom-3 duration-600">
+              <div className="bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-2xl border border-white/50">
                 <div className="flex items-start gap-3">
-                  <PriyaAvatar size="badge" isSpeaking={isSpeaking} />
-                  <div>
-                    <p className="text-xs font-semibold text-primary-700 mb-1">Priya</p>
+                  <AriaAvatar size="sm" isSpeaking={isSpeaking} />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs font-bold text-blue-700">Aria</p>
+                      {isSpeaking && (
+                        <div className="flex items-center gap-0.5">
+                          <span className="w-1 h-2 bg-blue-500 rounded-full animate-pulse" />
+                          <span className="w-1 h-3 bg-blue-500 rounded-full animate-pulse [animation-delay:100ms]" />
+                          <span className="w-1 h-2 bg-blue-500 rounded-full animate-pulse [animation-delay:200ms]" />
+                          <span className="w-1 h-3 bg-blue-500 rounded-full animate-pulse [animation-delay:300ms]" />
+                        </div>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-800 leading-relaxed">{room.narration.text}</p>
                   </div>
                 </div>
+                {/* Replay voice button */}
+                <button
+                  onClick={() => speak(room.narration.text)}
+                  className="mt-2 ml-12 text-xs text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  🔊 Listen again
+                </button>
               </div>
             </div>
           )}
 
-          {/* Features pills */}
-          <div className="flex flex-wrap gap-2 justify-center max-w-lg mx-auto">
+          {/* Features */}
+          <div className="flex flex-wrap gap-2 justify-center max-w-md mx-auto">
             {room.features.map((f, i) => (
-              <span key={i} className="px-3 py-1.5 bg-white/20 backdrop-blur-sm text-white rounded-full text-xs font-medium border border-white/30">
+              <span key={i} className="px-3 py-1.5 bg-white/15 backdrop-blur-sm text-white rounded-full text-xs font-medium border border-white/25">
                 {f.name}
               </span>
             ))}
@@ -248,56 +288,48 @@ function TourPage() {
 
         {/* Navigation arrows */}
         <button
-          onClick={() => navigateRoom("prev")}
+          onClick={() => navigateRoom(currentRoomIndex - 1)}
           disabled={isFirst}
-          className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/60 disabled:opacity-20 disabled:cursor-not-allowed transition-all z-10 border border-white/20"
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/20 backdrop-blur-md text-white flex items-center justify-center hover:bg-white/30 disabled:opacity-20 disabled:cursor-not-allowed transition-all z-10 border border-white/30"
           aria-label="Previous room"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+          ‹
         </button>
         <button
-          onClick={() => navigateRoom("next")}
+          onClick={() => navigateRoom(currentRoomIndex + 1)}
           disabled={isLast}
-          className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/60 disabled:opacity-20 disabled:cursor-not-allowed transition-all z-10 border border-white/20"
+          className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/20 backdrop-blur-md text-white flex items-center justify-center hover:bg-white/30 disabled:opacity-20 disabled:cursor-not-allowed transition-all z-10 border border-white/30"
           aria-label="Next room"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+          ›
         </button>
 
-        {/* Room dots indicator */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+        {/* Room dots */}
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex gap-2 z-10">
           {tourScript.rooms.map((r, i) => (
             <button
               key={r.id}
-              onClick={() => {
-                if (i !== currentRoomIndex) {
-                  if (viewedRooms.current.has(i)) postEvent("room_revisited", { room_id: r.id });
-                  viewedRooms.current.add(i);
-                  setTransitioning(true);
-                  setShowNarration(false);
-                  setTimeout(() => { setCurrentRoomIndex(i); roomEnteredAt.current = Date.now(); setTransitioning(false); setTimeout(() => setShowNarration(true), 500); }, 300);
-                }
-              }}
-              className={`w-2.5 h-2.5 rounded-full transition-all ${i === currentRoomIndex ? "bg-white scale-150 shadow-lg" : "bg-white/40 hover:bg-white/70"}`}
-              aria-label={`Go to ${r.name}`}
+              onClick={() => navigateRoom(i)}
+              className={`h-1.5 rounded-full transition-all ${i === currentRoomIndex ? "w-6 bg-white" : "w-1.5 bg-white/40 hover:bg-white/70"}`}
+              aria-label={r.name}
             />
           ))}
         </div>
       </div>
 
       {/* Bottom bar */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent px-4 py-4 flex items-center justify-between z-20">
+      <div className="absolute bottom-0 left-0 right-0 bg-black/80 backdrop-blur-md px-4 py-3 flex items-center justify-between z-20 border-t border-white/10">
         <button
-          onClick={() => setShowChat(!showChat)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-white/15 backdrop-blur-sm text-white rounded-full text-sm border border-white/25 hover:bg-white/25 transition-all"
+          onClick={() => { setShowChat(!showChat); if (showChat) stop(); }}
+          className="flex items-center gap-2 px-4 py-2.5 bg-white/10 text-white rounded-full text-sm border border-white/20 hover:bg-white/20 transition-all"
         >
-          <PriyaAvatar size="badge" isSpeaking={isSpeaking} />
-          <span className="font-medium">{showChat ? "Close Chat" : "Ask Priya"}</span>
+          <AriaAvatar size="sm" isSpeaking={isSpeaking && showChat} />
+          <span className="font-medium">{showChat ? "Close" : "Ask Aria"}</span>
         </button>
 
         <button
           onClick={() => setShowContact(true)}
-          className="px-5 py-2.5 bg-primary-500 text-white rounded-full text-sm font-bold shadow-lg hover:bg-primary-600 transition-all"
+          className="px-5 py-2.5 bg-blue-500 text-white rounded-full text-sm font-bold shadow-lg hover:bg-blue-600 transition-all"
         >
           📞 Contact Agent
         </button>
@@ -305,17 +337,13 @@ function TourPage() {
 
       {/* Chat panel */}
       {showChat && (
-        <div className="fixed bottom-0 left-0 right-0 h-[65vh] z-50 bg-white rounded-t-2xl shadow-2xl">
+        <div className="fixed bottom-0 left-0 right-0 h-[65vh] z-50 bg-white rounded-t-3xl shadow-2xl border-t border-gray-200">
           <div className="h-full flex flex-col">
-            <div className="flex items-center justify-between p-3 border-b bg-gray-50 rounded-t-2xl">
-              <div className="flex items-center gap-2">
-                <PriyaAvatar size="header" isSpeaking={isSpeaking} />
-                <span className="text-sm font-semibold text-gray-800">Chat with Priya</span>
-              </div>
-              <button onClick={() => setShowChat(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500">✕</button>
+            <div className="flex items-center justify-center pt-2 pb-1">
+              <div className="w-10 h-1 bg-gray-300 rounded-full" />
             </div>
             <div className="flex-1 overflow-hidden">
-              <ChatInterface ws={ws} isSpeaking={isSpeaking} />
+              <ChatInterface ws={ws} isSpeaking={wsSpeaking} />
             </div>
           </div>
         </div>
@@ -327,8 +355,7 @@ function TourPage() {
           onSubmit={(name, phone) => {
             postEvent("visit_booking_clicked", { buyer_name: name, buyer_phone: phone });
             setShowContact(false);
-            // Show success message
-            alert(`Thank you ${name}! Our agent will contact you at +91 ${phone} shortly.`);
+            alert(`Thank you ${name}! Our agent will call you at +91 ${phone} shortly.`);
           }}
           onClose={() => setShowContact(false)}
         />
